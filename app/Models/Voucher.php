@@ -142,8 +142,10 @@ class Voucher extends Model
             'claimed_by_staff_id' => $staff->id,
         ]);
 
-        // Update meal inventory
-        $this->mealInventory()->update(['status' => 'claimed']);
+        // Update meal inventory (only if this voucher has one - for donation-based meals)
+        if ($this->meal_inventory_id) {
+            $this->mealInventory()->update(['status' => 'claimed']);
+        }
 
         // Update system metrics
         SystemMetric::incrementCounter('total_meals_claimed');
@@ -158,7 +160,12 @@ class Voucher extends Model
     {
         if ($this->isExpired()) {
             $this->update(['status' => 'expired']);
-            $this->mealInventory()->update(['status' => 'available']);
+            // Only update meal inventory if this voucher has one (for donation-based meals)
+            if ($this->meal_inventory_id) {
+                $this->mealInventory()->update(['status' => 'available']);
+            }
+            // For managed meals, we could increment the meal quantity back, but that would
+            // require tracking which specific meal was reserved
         }
     }
 

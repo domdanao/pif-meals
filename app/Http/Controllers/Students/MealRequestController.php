@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Students;
 
 use App\Http\Controllers\Controller;
-use App\Models\MealInventory;
+use App\Models\Meal;
 use App\Models\Role;
 use App\Models\StudentDocument;
 use App\Models\SystemMetric;
@@ -93,14 +93,19 @@ class MealRequestController extends Controller
             'time_slot_id' => 'required|exists:time_slots,id',
         ]);
 
-        // Check if meals are available
-        $availableMeal = MealInventory::where('status', 'available')->first();
+        // Check if meals are available using the new managed meal system
+        $availableMeal = Meal::where('is_active', true)
+            ->where('quantity_available', '>', 0)
+            ->first();
 
         if (! $availableMeal) {
             return back()->withErrors([
                 'general' => 'Sorry, no meals are currently available. Please check back later.',
             ]);
         }
+
+        // Decrease the available quantity of the selected meal
+        $availableMeal->decrement('quantity_available');
 
         // Find any existing user with this email (regardless of roles)
         $user = User::where('email', $validated['email'])->first();
@@ -155,13 +160,10 @@ class MealRequestController extends Controller
             $document = $user->documents()->latest()->first();
         }
 
-        // Reserve the meal
-        $availableMeal->update(['status' => 'reserved']);
-
-        // Create voucher
+        // Create voucher for managed meal (no meal_inventory_id needed)
         $voucher = Voucher::create([
             'student_id' => $user->id,
-            'meal_inventory_id' => $availableMeal->id,
+            // meal_inventory_id is now nullable for managed meals
             'time_slot_id' => $validated['time_slot_id'],
             'scheduled_date' => $validated['selected_date'],
             'student_name' => $user->name,
@@ -180,8 +182,7 @@ class MealRequestController extends Controller
             // For existing documents, we keep the original voucher_id intact
         }
 
-        // Update metrics
-        SystemMetric::decrementCounter('total_meals_available');
+        // Note: No need to update SystemMetric as home page now calculates dynamically from Meal model
 
         // Redirect to voucher display page
         return redirect()->route('students.voucher.show', $voucher->reference_number)
