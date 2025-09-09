@@ -257,10 +257,10 @@ export default function QRScanner({
             <div className="relative">
                 <video
                     ref={videoRef}
-                    className={`w-full max-w-md mx-auto rounded-lg border-2 border-gray-300 dark:border-gray-600 ${
+                    className={`w-full max-w-lg mx-auto rounded-2xl border-4 border-gray-300 dark:border-gray-600 shadow-2xl ${
                         isScanning ? 'block' : 'hidden'
                     }`}
-                    style={{ aspectRatio: '1/1' }}
+                    style={{ aspectRatio: '4/3', minHeight: '400px' }}
                     playsInline
                     muted
                 />
@@ -269,37 +269,37 @@ export default function QRScanner({
                     <>
                         {/* Scanning overlay */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="w-48 h-48 border-2 border-blue-500 rounded-lg">
-                                <div className="w-full h-full border-2 border-blue-500 rounded-lg animate-pulse opacity-50"></div>
+                            <div className="w-64 h-64 border-4 border-blue-500 rounded-2xl shadow-lg">
+                                <div className="w-full h-full border-4 border-blue-400 rounded-2xl animate-pulse opacity-60"></div>
                             </div>
                         </div>
                         
                         {/* Stop button */}
                         <button
                             onClick={stopScanning}
-                            className="absolute top-4 right-4 bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition-colors"
+                            className="absolute top-6 right-6 bg-red-600 text-white p-3 rounded-full hover:bg-red-700 transition-colors shadow-lg hover:shadow-xl"
                         >
-                            <XMarkIcon className="h-5 w-5" />
+                            <XMarkIcon className="h-6 w-6" />
                         </button>
                         
                         {/* Zoom controls */}
                         {maxZoom > 1 && (
-                            <div className="absolute bottom-4 right-4 flex flex-col space-y-2">
+                            <div className="absolute bottom-6 right-6 flex flex-col space-y-3">
                                 <button
                                     onClick={() => handleZoomChange(Math.min(maxZoom, zoomLevel + 0.5))}
                                     disabled={zoomLevel >= maxZoom}
-                                    className="bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors disabled:opacity-30"
+                                    className="bg-black bg-opacity-60 text-white p-3 rounded-full hover:bg-opacity-80 transition-colors disabled:opacity-30 shadow-lg"
                                     title="Zoom In"
                                 >
-                                    <MagnifyingGlassPlusIcon className="h-4 w-4" />
+                                    <MagnifyingGlassPlusIcon className="h-5 w-5" />
                                 </button>
                                 <button
                                     onClick={() => handleZoomChange(Math.max(1, zoomLevel - 0.5))}
                                     disabled={zoomLevel <= 1}
-                                    className="bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors disabled:opacity-30"
+                                    className="bg-black bg-opacity-60 text-white p-3 rounded-full hover:bg-opacity-80 transition-colors disabled:opacity-30 shadow-lg"
                                     title="Zoom Out"
                                 >
-                                    <MagnifyingGlassMinusIcon className="h-4 w-4" />
+                                    <MagnifyingGlassMinusIcon className="h-5 w-5" />
                                 </button>
                             </div>
                         )}
@@ -308,33 +308,33 @@ export default function QRScanner({
             </div>
             
             {!isScanning && (
-                <div className="text-center py-8">
-                    <CameraIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
+                <div className="text-center py-16">
+                    <CameraIcon className="h-24 w-24 text-gray-400 mx-auto mb-6" />
+                    <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
                         Point your camera at a QR code to scan
                     </p>
                     <button
                         onClick={startScanning}
-                        className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                        className="inline-flex items-center px-8 py-4 border border-transparent text-xl font-semibold rounded-2xl text-white bg-blue-600 hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
                     >
-                        <CameraIcon className="h-5 w-5 mr-2" />
+                        <CameraIcon className="h-6 w-6 mr-3" />
                         Start Scanning
                     </button>
                 </div>
             )}
             
             {isScanning && (
-                <div className="text-center space-y-2">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-center space-y-3 mt-6">
+                    <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
                         Position the QR code within the scanning area
                     </p>
                     {selectedCameraLabel && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                             Using: {selectedCameraLabel}
                         </p>
                     )}
                     {maxZoom > 1 && zoomLevel > 1 && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                             Zoom: {zoomLevel.toFixed(1)}x
                         </p>
                     )}

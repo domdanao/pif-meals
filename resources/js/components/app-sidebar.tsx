@@ -4,7 +4,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { dashboard } from '@/routes';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, Shield, Users, Settings, Ticket } from 'lucide-react';
+import { LayoutGrid, Shield, Users, Settings, Ticket, ScanLine } from 'lucide-react';
 import AppLogo from './app-logo';
 
 export function AppSidebar() {
@@ -13,16 +13,24 @@ export function AppSidebar() {
     const isStaff = auth.user.role === 'staff';
     const isAdminOrStaff = ['admin', 'staff'].includes(auth.user.role);
     
+    // Use admin dashboard for admin/staff users, regular dashboard for others
+    const dashboardUrl = isAdminOrStaff ? '/admin/dashboard' : dashboard();
+    
     const mainNavItems: NavItem[] = [
         {
             title: 'Dashboard',
-            href: dashboard(),
+            href: dashboardUrl,
             icon: LayoutGrid,
         },
     ];
 
     // Admin and Staff can access voucher management
     const staffNavItems: NavItem[] = isAdminOrStaff ? [
+        {
+            title: 'QR Scanner',
+            href: '/admin/vouchers/scan',
+            icon: ScanLine,
+        },
         {
             title: 'Voucher Management',
             href: '/admin/vouchers',
@@ -49,7 +57,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href={dashboardUrl} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

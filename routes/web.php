@@ -96,6 +96,14 @@ Route::prefix('students')->name('students.')->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
+        $user = auth()->user();
+        
+        // Redirect admin and staff to admin dashboard
+        if (in_array($user->role, ['admin', 'staff'])) {
+            return redirect()->route('admin.dashboard');
+        }
+        
+        // For other users (students, donors), show regular dashboard
         return Inertia::render('dashboard');
     })->name('dashboard');
 });

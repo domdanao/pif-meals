@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Head, router } from '@inertiajs/react';
-import { CheckCircleIcon, ExclamationTriangleIcon, QrCodeIcon, TicketIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, ExclamationTriangleIcon, QrCodeIcon, HomeIcon } from '@heroicons/react/24/outline';
 import QRScanner from '../../../components/QRScanner';
 import AppLayout from '../../../layouts/app-layout';
 
@@ -19,6 +19,37 @@ export default function VoucherScan() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [scanResult, setScanResult] = useState<ClaimResult | null>(null);
     const [error, setError] = useState<string>('');
+    
+    // Audio refs for sound effects
+    const successSoundRef = useRef<HTMLAudioElement>(null);
+    const errorSoundRef = useRef<HTMLAudioElement>(null);
+    
+    // Initialize audio elements
+    useEffect(() => {
+        // Create success sound (higher frequency beep)
+        const successAudio = new Audio();
+        successAudio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaCSGJzfLNfC0Fdbjo9KpnHAUWhM7x2ooxCBdk' + 'vOzlpVANCEup4vS5ZRsGJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaCSGJzfLNfC0FJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaCSGJzfLNfC0FJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaCSGJzfLNfC0FJHfH8N2QQAoUXrTp66hVFA';
+        successSoundRef.current = successAudio;
+        
+        // Create error sound (lower frequency buzz)
+        const errorAudio = new Audio();
+        errorAudio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaCS' + 'GJzfLNfC0FJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaCSGJzfLNfC0FJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaCSGJzfLNfC0FJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaCSGJzfLNfC0FJHfH8N2QQAoUXrTp66hVFA';
+        errorSoundRef.current = errorAudio;
+    }, []);
+    
+    const playSuccessSound = () => {
+        if (successSoundRef.current) {
+            successSoundRef.current.currentTime = 0;
+            successSoundRef.current.play().catch(console.warn);
+        }
+    };
+    
+    const playErrorSound = () => {
+        if (errorSoundRef.current) {
+            errorSoundRef.current.currentTime = 0;
+            errorSoundRef.current.play().catch(console.warn);
+        }
+    };
 
     const handleScan = async (scannedText: string) => {
         console.log('QR Code scanned:', scannedText);
@@ -67,6 +98,7 @@ export default function VoucherScan() {
                 } else {
                     setError(`Server error (${response.status}). Please try again.`);
                 }
+                playErrorSound();
                 return;
             }
             
@@ -75,8 +107,11 @@ export default function VoucherScan() {
             
             setScanResult(data);
             
-            if (!data.success) {
+            if (data.success) {
+                playSuccessSound();
+            } else {
                 setError(data.message);
+                playErrorSound();
             }
         } catch (err) {
             console.error('Network/Parse error:', err);
@@ -87,6 +122,7 @@ export default function VoucherScan() {
             } else {
                 setError('Network error. Please try again.');
             }
+            playErrorSound();
         } finally {
             setIsProcessing(false);
         }
@@ -94,6 +130,7 @@ export default function VoucherScan() {
 
     const handleScanError = (errorMessage: string) => {
         setError(errorMessage);
+        playErrorSound();
     };
 
     const handleStartScan = () => {
@@ -112,120 +149,116 @@ export default function VoucherScan() {
         setIsScanning(false);
     };
 
-    const navigateToVoucherList = () => {
-        router.visit('/admin/vouchers');
+    const navigateToDashboard = () => {
+        router.visit('/admin/dashboard');
     };
 
     return (
-        <AppLayout>
-            <Head title="Scan Voucher QR Code - PIF Meals Admin" />
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <Head title="QR Scanner - PIF Meals Admin" />
             
-            <div className="py-6">
-                <div className="mx-auto max-w-4xl px-6 lg:px-8">
-                    {/* Header */}
-                    <div className="mb-8">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                    Scan Voucher QR Code
-                                </h1>
-                                <p className="mt-2 text-gray-600 dark:text-gray-400">
-                                    Scan a voucher QR code to automatically claim it
-                                </p>
-                            </div>
-                            <button
-                                onClick={navigateToVoucherList}
-                                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-                            >
-                                <TicketIcon className="h-4 w-4 mr-2" />
-                                View All Vouchers
-                            </button>
-                        </div>
+            {/* Floating Dashboard Button */}
+            <button
+                onClick={navigateToDashboard}
+                className="fixed top-6 left-6 z-50 inline-flex items-center px-4 py-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all duration-200 hover:shadow-xl"
+                title="Back to Dashboard"
+            >
+                <HomeIcon className="h-5 w-5 mr-2" />
+                Dashboard
+            </button>
+
+            {/* Main Scanner Content */}
+            <div className="flex flex-col items-center justify-center min-h-screen p-6">
+                
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <div className="flex items-center justify-center mb-4">
+                        <QrCodeIcon className="h-12 w-12 text-blue-600 mr-3" />
+                        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+                            QR Scanner
+                        </h1>
                     </div>
+                    <p className="text-xl text-gray-600 dark:text-gray-400">
+                        Scan voucher QR codes to claim them instantly
+                    </p>
+                </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Scanner Section */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                            <div className="flex items-center mb-6">
-                                <QrCodeIcon className="h-6 w-6 text-blue-600 mr-2" />
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    QR Code Scanner
-                                </h2>
+                {/* Large Scanner Section */}
+                <div className="w-full max-w-2xl">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
+                        {isProcessing ? (
+                            <div className="text-center py-16">
+                                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-6"></div>
+                                <p className="text-xl text-gray-600 dark:text-gray-400">Processing voucher...</p>
                             </div>
-
-                            {isProcessing ? (
-                                <div className="text-center py-12">
-                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                                    <p className="text-gray-600 dark:text-gray-400">Processing voucher...</p>
-                                </div>
-                            ) : (
-                                <QRScanner
-                                    onScan={handleScan}
-                                    onError={handleScanError}
-                                    isScanning={isScanning}
-                                    onStartScan={handleStartScan}
-                                    onStopScan={handleStopScan}
-                                />
-                            )}
-
-                            {error && (
-                                <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                                    <div className="flex items-center">
-                                        <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-2" />
-                                        <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+                        ) : (
+                            <div className="space-y-8">
+                                {/* Enhanced QR Scanner with larger area */}
+                                <div className="flex justify-center">
+                                    <div className="relative">
+                                        <QRScanner
+                                            onScan={handleScan}
+                                            onError={handleScanError}
+                                            isScanning={isScanning}
+                                            onStartScan={handleStartScan}
+                                            onStopScan={handleStopScan}
+                                        />
                                     </div>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
-                        {/* Results Section */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                                Scan Results
-                            </h2>
-
-                            {!scanResult ? (
-                                <div className="text-center py-12">
-                                    <QrCodeIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                    <p className="text-gray-500 dark:text-gray-400">
-                                        Scan a QR code to see results here
-                                    </p>
+                        {/* Error Display */}
+                        {error && (
+                            <div className="mt-6 p-6 bg-red-50 dark:bg-red-900/20 rounded-xl border-2 border-red-200 dark:border-red-800">
+                                <div className="flex items-center justify-center">
+                                    <ExclamationTriangleIcon className="h-8 w-8 text-red-500 mr-3" />
+                                    <p className="text-red-700 dark:text-red-400 text-lg font-medium">{error}</p>
                                 </div>
-                            ) : scanResult.success ? (
-                                <div className="space-y-4">
-                                    <div className="flex items-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                                        <CheckCircleIcon className="h-8 w-8 text-green-500 mr-3" />
-                                        <div>
-                                            <h3 className="font-semibold text-green-800 dark:text-green-400">
-                                                Voucher Claimed Successfully!
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Results Section */}
+                {scanResult && (
+                    <div className="w-full max-w-2xl mt-8">
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
+                            {scanResult.success ? (
+                                <div className="text-center space-y-6">
+                                    <div className="flex items-center justify-center p-6 bg-green-50 dark:bg-green-900/20 rounded-xl border-2 border-green-200 dark:border-green-800">
+                                        <CheckCircleIcon className="h-16 w-16 text-green-500 mr-4" />
+                                        <div className="text-left">
+                                            <h3 className="text-2xl font-bold text-green-800 dark:text-green-400">
+                                                Success!
                                             </h3>
-                                            <p className="text-green-600 dark:text-green-300 text-sm">
+                                            <p className="text-green-600 dark:text-green-300 text-lg">
                                                 {scanResult.message}
                                             </p>
                                         </div>
                                     </div>
 
                                     {scanResult.voucher && (
-                                        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-3">
-                                            <h4 className="font-medium text-gray-900 dark:text-white">
+                                        <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-6">
+                                            <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
                                                 Voucher Details
                                             </h4>
-                                            <div className="space-y-2 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600 dark:text-gray-400">Reference:</span>
-                                                    <span className="font-mono text-gray-900 dark:text-white">
+                                            <div className="space-y-3 text-lg">
+                                                <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                                    <span className="text-gray-600 dark:text-gray-400 font-medium">Reference:</span>
+                                                    <span className="font-mono text-gray-900 dark:text-white font-bold">
                                                         {scanResult.voucher.reference_number}
                                                     </span>
                                                 </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600 dark:text-gray-400">Student:</span>
-                                                    <span className="text-gray-900 dark:text-white">
+                                                <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                                    <span className="text-gray-600 dark:text-gray-400 font-medium">Student:</span>
+                                                    <span className="text-gray-900 dark:text-white font-bold">
                                                         {scanResult.voucher.student_name}
                                                     </span>
                                                 </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600 dark:text-gray-400">Time Slot:</span>
-                                                    <span className="text-gray-900 dark:text-white">
+                                                <div className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                                                    <span className="text-gray-600 dark:text-gray-400 font-medium">Time Slot:</span>
+                                                    <span className="text-gray-900 dark:text-white font-bold">
                                                         {scanResult.voucher.time_slot}
                                                     </span>
                                                 </div>
@@ -235,20 +268,20 @@ export default function VoucherScan() {
 
                                     <button
                                         onClick={resetScanner}
-                                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        className="w-full px-8 py-4 bg-blue-600 text-white text-xl font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-lg"
                                     >
                                         Scan Another Voucher
                                     </button>
                                 </div>
                             ) : (
-                                <div className="space-y-4">
-                                    <div className="flex items-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                                        <ExclamationTriangleIcon className="h-8 w-8 text-red-500 mr-3" />
-                                        <div>
-                                            <h3 className="font-semibold text-red-800 dark:text-red-400">
-                                                Failed to Claim Voucher
+                                <div className="text-center space-y-6">
+                                    <div className="flex items-center justify-center p-6 bg-red-50 dark:bg-red-900/20 rounded-xl border-2 border-red-200 dark:border-red-800">
+                                        <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mr-4" />
+                                        <div className="text-left">
+                                            <h3 className="text-2xl font-bold text-red-800 dark:text-red-400">
+                                                Failed to Claim
                                             </h3>
-                                            <p className="text-red-600 dark:text-red-300 text-sm">
+                                            <p className="text-red-600 dark:text-red-300 text-lg">
                                                 {scanResult.message}
                                             </p>
                                         </div>
@@ -256,7 +289,7 @@ export default function VoucherScan() {
 
                                     <button
                                         onClick={resetScanner}
-                                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        className="w-full px-8 py-4 bg-blue-600 text-white text-xl font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-lg"
                                     >
                                         Try Again
                                     </button>
@@ -264,33 +297,19 @@ export default function VoucherScan() {
                             )}
                         </div>
                     </div>
+                )}
 
-                    {/* Instructions */}
-                    <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
-                        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                            How to Use the Scanner:
-                        </h3>
-                        <ul className="text-blue-800 dark:text-blue-200 space-y-2 text-sm">
-                            <li className="flex items-start">
-                                <span className="inline-block w-5 h-5 rounded-full bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 text-xs flex items-center justify-center mr-2 mt-0.5 font-semibold">1</span>
-                                Click "Start Scanning" to activate your device's camera
-                            </li>
-                            <li className="flex items-start">
-                                <span className="inline-block w-5 h-5 rounded-full bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 text-xs flex items-center justify-center mr-2 mt-0.5 font-semibold">2</span>
-                                Point your camera at the voucher's QR code
-                            </li>
-                            <li className="flex items-start">
-                                <span className="inline-block w-5 h-5 rounded-full bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 text-xs flex items-center justify-center mr-2 mt-0.5 font-semibold">3</span>
-                                The voucher will automatically be claimed when scanned
-                            </li>
-                            <li className="flex items-start">
-                                <span className="inline-block w-5 h-5 rounded-full bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 text-xs flex items-center justify-center mr-2 mt-0.5 font-semibold">4</span>
-                                View the results and scan another voucher if needed
-                            </li>
-                        </ul>
+                {/* Quick Instructions */}
+                {!scanResult && (
+                    <div className="w-full max-w-2xl mt-8">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800 text-center">
+                            <p className="text-blue-800 dark:text-blue-200 text-lg">
+                                <strong>Quick Start:</strong> Click "Start Scanning" and point your camera at the QR code. The voucher will be claimed automatically.
+                            </p>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
-        </AppLayout>
+        </div>
     );
 }
