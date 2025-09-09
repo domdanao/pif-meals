@@ -57,19 +57,15 @@ class CreateAdminUser extends Command
             return 1;
         }
 
-        // Get phone number if not provided
+        // Get phone number if not provided (non-interactive)
         if (! $phone) {
-            $phone = $this->ask('Enter phone number (optional)');
+            $phone = null; // Allow null phone numbers
         }
 
-        // Get password if not provided
+        // Get password if not provided (non-interactive)
         if (! $password) {
-            $password = $this->secret('Enter password (leave empty to generate random)');
-
-            if (! $password) {
-                $password = \Illuminate\Support\Str::random(12);
-                $this->info("Generated password: {$password}");
-            }
+            $password = \Illuminate\Support\Str::random(12);
+            $this->info("Generated password: {$password}");
         }
 
         // Create the user
