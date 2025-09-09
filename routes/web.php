@@ -3,6 +3,7 @@
 use App\Http\Controllers\DonationController;
 use App\Http\Controllers\Students\MealRequestController;
 use App\Http\Controllers\WelcomeController;
+use App\Models\TimeSlot;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -23,6 +24,24 @@ Route::get('/test-flash', function () {
     return redirect()->route('donate')
         ->with('info', 'This is a test flash message!');
 })->name('test.flash');
+
+// Debug route for time slots
+Route::get('/debug/time-slots', function () {
+    $timeSlots = TimeSlot::active()->get();
+    return response()->json([
+        'total_time_slots' => TimeSlot::count(),
+        'active_time_slots' => $timeSlots->count(),
+        'time_slots' => $timeSlots->map(function($slot) {
+            return [
+                'id' => $slot->id,
+                'display_name' => $slot->display_name,
+                'start_time' => $slot->start_time,
+                'end_time' => $slot->end_time,
+                'is_active' => $slot->is_active,
+            ];
+        }),
+    ]);
+})->name('debug.time-slots');
 
 // Student meal request flow
 Route::prefix('students')->name('students.')->group(function () {
