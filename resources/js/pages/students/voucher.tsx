@@ -115,7 +115,7 @@ export default function Voucher({ voucher }: VoucherProps) {
                             <div className="flex justify-center mb-8">
                                 <QRCodeComponent 
                                     value={voucher.reference_number}
-                                    size={128}
+                                    size={200}
                                     className="border border-gray-200 dark:border-gray-600"
                                 />
                             </div>

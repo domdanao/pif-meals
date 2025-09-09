@@ -37,10 +37,7 @@ class VoucherController extends Controller
             });
         }
 
-        // Default to showing active vouchers if no status filter
-        if (! $request->filled('status')) {
-            $query->where('status', 'active');
-        }
+        // Show all vouchers by default unless a specific status filter is applied
 
         $vouchers = $query->orderBy('scheduled_date')
             ->orderBy('created_at')

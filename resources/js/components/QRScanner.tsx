@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { BrowserMultiFormatReader, NotFoundException } from '@zxing/library';
-import { CameraIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, XMarkIcon, MagnifyingGlassPlusIcon, MagnifyingGlassMinusIcon } from '@heroicons/react/24/outline';
 
 interface QRScannerProps {
     onScan: (result: string) => void;
@@ -22,6 +22,9 @@ export default function QRScanner({
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
     const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
     const [selectedCameraLabel, setSelectedCameraLabel] = useState<string>('');
+    const [zoomLevel, setZoomLevel] = useState<number>(1);
+    const [maxZoom, setMaxZoom] = useState<number>(3);
+    const [currentStream, setCurrentStream] = useState<MediaStream | null>(null);
 
     useEffect(() => {
         console.log('QRScanner: Initializing scanner...');
@@ -91,14 +94,31 @@ export default function QRScanner({
             // If no specific device found, try using facingMode constraint for rear camera
             if (!selectedDeviceId) {
                 try {
-                    // Use MediaTrackConstraints to prefer rear camera
+                    // Use enhanced MediaTrackConstraints for rear camera with close-up focus
                     const constraints = {
                         video: {
-                            facingMode: { ideal: 'environment' } // 'environment' = rear camera, 'user' = front camera
+                            facingMode: { ideal: 'environment' }, // 'environment' = rear camera
+                            width: { ideal: 1280, max: 1920 },
+                            height: { ideal: 720, max: 1080 },
+                            focusMode: { ideal: 'continuous' },
+                            focusDistance: { ideal: 0.1 }, // Close focus for QR codes
+                            zoom: { ideal: zoomLevel, max: maxZoom }
                         }
                     };
                     const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    setCurrentStream(stream);
                     setSelectedCameraLabel('Rear Camera (Environment)');
+                    
+                    // Get camera capabilities for zoom control
+                    const videoTrack = stream.getVideoTracks()[0];
+                    if (videoTrack) {
+                        const capabilities = videoTrack.getCapabilities();
+                        if (capabilities.zoom) {
+                            setMaxZoom(capabilities.zoom.max || 3);
+                            console.log('Camera zoom range:', capabilities.zoom);
+                        }
+                    }
+                    
                     if (videoRef.current) {
                         videoRef.current.srcObject = stream;
                         await videoRef.current.play();
@@ -167,12 +187,36 @@ export default function QRScanner({
         }
     };
 
+    const handleZoomChange = async (newZoom: number) => {
+        if (!currentStream) return;
+        
+        const videoTrack = currentStream.getVideoTracks()[0];
+        if (videoTrack) {
+            try {
+                await videoTrack.applyConstraints({
+                    zoom: newZoom
+                });
+                setZoomLevel(newZoom);
+                console.log('Zoom applied:', newZoom);
+            } catch (error) {
+                console.warn('Zoom not supported or failed:', error);
+            }
+        }
+    };
+
     const stopScanning = () => {
         if (codeReader) {
             codeReader.reset();
         }
         
         // Clean up video stream if we created it manually
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => {
+                track.stop();
+            });
+            setCurrentStream(null);
+        }
+        
         if (videoRef.current && videoRef.current.srcObject) {
             const stream = videoRef.current.srcObject as MediaStream;
             stream.getTracks().forEach(track => {
@@ -237,6 +281,28 @@ export default function QRScanner({
                         >
                             <XMarkIcon className="h-5 w-5" />
                         </button>
+                        
+                        {/* Zoom controls */}
+                        {maxZoom > 1 && (
+                            <div className="absolute bottom-4 right-4 flex flex-col space-y-2">
+                                <button
+                                    onClick={() => handleZoomChange(Math.min(maxZoom, zoomLevel + 0.5))}
+                                    disabled={zoomLevel >= maxZoom}
+                                    className="bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors disabled:opacity-30"
+                                    title="Zoom In"
+                                >
+                                    <MagnifyingGlassPlusIcon className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={() => handleZoomChange(Math.max(1, zoomLevel - 0.5))}
+                                    disabled={zoomLevel <= 1}
+                                    className="bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors disabled:opacity-30"
+                                    title="Zoom Out"
+                                >
+                                    <MagnifyingGlassMinusIcon className="h-4 w-4" />
+                                </button>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
@@ -265,6 +331,11 @@ export default function QRScanner({
                     {selectedCameraLabel && (
                         <p className="text-xs text-gray-400 dark:text-gray-500">
                             Using: {selectedCameraLabel}
+                        </p>
+                    )}
+                    {maxZoom > 1 && zoomLevel > 1 && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                            Zoom: {zoomLevel.toFixed(1)}x
                         </p>
                     )}
                 </div>
