@@ -21,6 +21,7 @@ export default function QRScanner({
     const [codeReader, setCodeReader] = useState<BrowserMultiFormatReader | null>(null);
     const [hasPermission, setHasPermission] = useState<boolean | null>(null);
     const [availableDevices, setAvailableDevices] = useState<MediaDeviceInfo[]>([]);
+    const [selectedCameraLabel, setSelectedCameraLabel] = useState<string>('');
 
     useEffect(() => {
         console.log('QRScanner: Initializing scanner...');
@@ -66,27 +67,98 @@ export default function QRScanner({
             console.log('QRScanner: Calling onStartScan');
             onStartScan();
             
-            // Use the first available camera (typically back camera on mobile)
-            const selectedDeviceId = availableDevices.length > 0 ? availableDevices[0].deviceId : undefined;
+            // Prefer rear camera over front camera for QR scanning
+            let selectedDeviceId: string | undefined;
+            if (availableDevices.length > 0) {
+                // Look for rear-facing camera first (better for QR scanning)
+                const rearCamera = availableDevices.find(device => 
+                    device.label.toLowerCase().includes('back') ||
+                    device.label.toLowerCase().includes('rear') ||
+                    device.label.toLowerCase().includes('environment') ||
+                    !device.label.toLowerCase().includes('front') && !device.label.toLowerCase().includes('user')
+                );
+                
+                selectedDeviceId = rearCamera ? rearCamera.deviceId : availableDevices[0].deviceId;
+                const selectedCamera = rearCamera || availableDevices[0];
+                setSelectedCameraLabel(selectedCamera.label);
+                console.log('QRScanner: Available cameras:', availableDevices.map(d => ({ id: d.deviceId, label: d.label })));
+                console.log('QRScanner: Selected camera:', selectedCamera.label);
+            }
             console.log('QRScanner: Using device ID:', selectedDeviceId);
             
             console.log('QRScanner: Starting video decode...');
-            await codeReader.decodeFromVideoDevice(
-                selectedDeviceId,
-                videoRef.current,
-                (result, error) => {
-                    if (result) {
-                        console.log('QRScanner: QR code detected:', result.getText());
-                        const scannedText = result.getText();
-                        onScan(scannedText);
-                        stopScanning();
+            
+            // If no specific device found, try using facingMode constraint for rear camera
+            if (!selectedDeviceId) {
+                try {
+                    // Use MediaTrackConstraints to prefer rear camera
+                    const constraints = {
+                        video: {
+                            facingMode: { ideal: 'environment' } // 'environment' = rear camera, 'user' = front camera
+                        }
+                    };
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    setSelectedCameraLabel('Rear Camera (Environment)');
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = stream;
+                        await videoRef.current.play();
+                        
+                        // Now use ZXing to decode from the video element
+                        await codeReader.decodeFromVideoElement(
+                            videoRef.current,
+                            (result, error) => {
+                                if (result) {
+                                    console.log('QRScanner: QR code detected:', result.getText());
+                                    const scannedText = result.getText();
+                                    onScan(scannedText);
+                                    stopScanning();
+                                }
+                                if (error && !(error instanceof NotFoundException)) {
+                                    console.error('QR scan error:', error);
+                                    onError?.('Error scanning QR code. Please try again.');
+                                }
+                            }
+                        );
                     }
-                    if (error && !(error instanceof NotFoundException)) {
-                        console.error('QR scan error:', error);
-                        onError?.('Error scanning QR code. Please try again.');
-                    }
+                } catch (constraintError) {
+                    console.warn('QRScanner: Failed to use facingMode constraint, falling back to device selection:', constraintError);
+                    // Fallback to original method
+                    await codeReader.decodeFromVideoDevice(
+                        selectedDeviceId,
+                        videoRef.current,
+                        (result, error) => {
+                            if (result) {
+                                console.log('QRScanner: QR code detected:', result.getText());
+                                const scannedText = result.getText();
+                                onScan(scannedText);
+                                stopScanning();
+                            }
+                            if (error && !(error instanceof NotFoundException)) {
+                                console.error('QR scan error:', error);
+                                onError?.('Error scanning QR code. Please try again.');
+                            }
+                        }
+                    );
                 }
-            );
+            } else {
+                // Use the selected device ID
+                await codeReader.decodeFromVideoDevice(
+                    selectedDeviceId,
+                    videoRef.current,
+                    (result, error) => {
+                        if (result) {
+                            console.log('QRScanner: QR code detected:', result.getText());
+                            const scannedText = result.getText();
+                            onScan(scannedText);
+                            stopScanning();
+                        }
+                        if (error && !(error instanceof NotFoundException)) {
+                            console.error('QR scan error:', error);
+                            onError?.('Error scanning QR code. Please try again.');
+                        }
+                    }
+                );
+            }
             console.log('QRScanner: Video decode started successfully');
         } catch (error) {
             console.error('QRScanner: Error starting scan:', error);
@@ -99,6 +171,16 @@ export default function QRScanner({
         if (codeReader) {
             codeReader.reset();
         }
+        
+        // Clean up video stream if we created it manually
+        if (videoRef.current && videoRef.current.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => {
+                track.stop();
+            });
+            videoRef.current.srcObject = null;
+        }
+        
         onStopScan();
     };
 
@@ -176,10 +258,15 @@ export default function QRScanner({
             )}
             
             {isScanning && (
-                <div className="text-center">
+                <div className="text-center space-y-2">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                         Position the QR code within the scanning area
                     </p>
+                    {selectedCameraLabel && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                            Using: {selectedCameraLabel}
+                        </p>
+                    )}
                 </div>
             )}
         </div>
