@@ -43,6 +43,49 @@ Route::get('/debug/time-slots', function () {
     ]);
 })->name('debug.time-slots');
 
+// Debug route for testing voucher claim
+Route::get('/debug/vouchers', function () {
+    $vouchers = \App\Models\Voucher::with('timeSlot')->take(5)->get();
+    return response()->json([
+        'total_vouchers' => \App\Models\Voucher::count(),
+        'sample_vouchers' => $vouchers->map(function($voucher) {
+            return [
+                'reference_number' => $voucher->reference_number,
+                'status' => $voucher->status,
+                'student_name' => $voucher->student_name,
+                'time_slot' => $voucher->timeSlot?->display_name ?? 'N/A',
+                'created_at' => $voucher->created_at?->format('Y-m-d H:i:s'),
+            ];
+        }),
+        'auth_check' => [
+            'is_authenticated' => auth()->check(),
+            'user_id' => auth()->id(),
+            'user_role' => auth()->user()?->role ?? 'not authenticated',
+            'has_admin_middleware' => 'Check if you can access /admin routes',
+        ],
+    ]);
+})->name('debug.vouchers');
+
+// Test quick-claim API with proper authentication
+Route::post('/debug/test-quick-claim', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'reference_number' => 'required|string',
+    ]);
+    
+    if (!auth()->check()) {
+        return response()->json(['error' => 'Not authenticated'], 401);
+    }
+    
+    $user = auth()->user();
+    if (!in_array($user->role, ['admin', 'staff'])) {
+        return response()->json(['error' => 'Access denied. Admin or staff privileges required.'], 403);
+    }
+    
+    // Call the actual controller method
+    $controller = new \App\Http\Controllers\Admin\VoucherController();
+    return $controller->quickClaim($request);
+})->name('debug.test-quick-claim');
+
 // Student meal request flow
 Route::prefix('students')->name('students.')->group(function () {
     Route::get('/request-meal', [MealRequestController::class, 'create'])->name('request-meal');

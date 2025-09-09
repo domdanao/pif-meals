@@ -21,23 +21,57 @@ export default function VoucherScan() {
     const [error, setError] = useState<string>('');
 
     const handleScan = async (scannedText: string) => {
+        console.log('QR Code scanned:', scannedText);
         setIsProcessing(true);
         setError('');
         setScanResult(null);
 
         try {
+            console.log('Making request to:', '/admin/vouchers/quick-claim');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            console.log('CSRF Token:', csrfToken ? 'Found' : 'Missing');
+            
             const response = await fetch('/admin/vouchers/quick-claim', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'X-CSRF-TOKEN': csrfToken || '',
                 },
                 body: JSON.stringify({
                     reference_number: scannedText.trim()
                 }),
             });
 
+            console.log('Response status:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            if (!response.ok) {
+                // Handle HTTP error responses
+                const errorText = await response.text();
+                console.error('HTTP Error Response:', errorText);
+                
+                if (response.status === 401) {
+                    setError('Authentication required. Please log in again.');
+                } else if (response.status === 403) {
+                    setError('Permission denied. Admin access required.');
+                } else if (response.status === 419) {
+                    setError('Session expired. Please refresh the page.');
+                } else if (response.status === 422) {
+                    // Validation error
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        setError(errorData.message || 'Invalid voucher reference.');
+                    } catch {
+                        setError('Invalid voucher reference.');
+                    }
+                } else {
+                    setError(`Server error (${response.status}). Please try again.`);
+                }
+                return;
+            }
+            
             const data = await response.json();
+            console.log('Response data:', data);
             
             setScanResult(data);
             
@@ -45,8 +79,14 @@ export default function VoucherScan() {
                 setError(data.message);
             }
         } catch (err) {
-            console.error('Error claiming voucher:', err);
-            setError('Network error. Please try again.');
+            console.error('Network/Parse error:', err);
+            if (err instanceof TypeError && err.message.includes('fetch')) {
+                setError('Network connection failed. Check your internet connection.');
+            } else if (err instanceof SyntaxError) {
+                setError('Server response format error. Please try again.');
+            } else {
+                setError('Network error. Please try again.');
+            }
         } finally {
             setIsProcessing(false);
         }
