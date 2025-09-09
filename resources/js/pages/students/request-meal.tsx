@@ -500,9 +500,9 @@ export default function RequestMeal({ time_slots }: RequestMealProps) {
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                                             Choose Date *
                                         </label>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                            {/* Generate next 7 days starting from tomorrow */}
-                                            {Array.from({ length: 7 }, (_, i) => {
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            {/* Generate next 3 days starting from tomorrow */}
+                                            {Array.from({ length: 3 }, (_, i) => {
                                                 const date = new Date();
                                                 date.setDate(date.getDate() + i + 1);
                                                 const dateString = date.toISOString().split('T')[0];

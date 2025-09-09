@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\MealController;
 use App\Http\Controllers\Admin\SystemSettingsController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Admin\VoucherController;
@@ -33,6 +34,19 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
 
 // Admin-only routes
 Route::middleware(['auth', 'verified', 'admin-only'])->prefix('admin')->name('admin.')->group(function () {
+
+    // Meal Management (Admin Only)
+    Route::prefix('meals')->name('meals.')->group(function () {
+        Route::get('/', [MealController::class, 'index'])->name('index');
+        Route::get('/create', [MealController::class, 'create'])->name('create');
+        Route::post('/', [MealController::class, 'store'])->name('store');
+        Route::get('/{meal}', [MealController::class, 'show'])->name('show');
+        Route::get('/{meal}/edit', [MealController::class, 'edit'])->name('edit');
+        Route::patch('/{meal}', [MealController::class, 'update'])->name('update');
+        Route::delete('/{meal}', [MealController::class, 'destroy'])->name('destroy');
+        Route::patch('/{meal}/toggle-status', [MealController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/bulk-update-quantity', [MealController::class, 'bulkUpdateQuantity'])->name('bulk-update-quantity');
+    });
 
     // User Management (Admin Only)
     Route::prefix('users')->name('users.')->group(function () {

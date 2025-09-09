@@ -160,11 +160,11 @@ export default function VoucherScan() {
             {/* Floating Dashboard Button */}
             <button
                 onClick={navigateToDashboard}
-                className="fixed top-6 left-6 z-50 inline-flex items-center px-4 py-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all duration-200 hover:shadow-xl"
+                className="fixed top-6 left-6 z-50 inline-flex items-center px-3 py-3 sm:px-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all duration-200 hover:shadow-xl"
                 title="Back to Dashboard"
             >
-                <HomeIcon className="h-5 w-5 mr-2" />
-                Dashboard
+                <HomeIcon className="h-5 w-5 sm:mr-2" />
+                <span className="hidden sm:inline">Dashboard</span>
             </button>
 
             {/* Main Scanner Content */}

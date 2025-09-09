@@ -4,7 +4,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 import { dashboard } from '@/routes';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, Shield, Users, Settings, Ticket, ScanLine } from 'lucide-react';
+import { LayoutGrid, Shield, Users, Settings, Ticket, ScanLine, ChefHat } from 'lucide-react';
 import AppLogo from './app-logo';
 
 export function AppSidebar() {
@@ -38,8 +38,13 @@ export function AppSidebar() {
         },
     ] : [];
 
-    // Only Admins can access user management and system settings
+    // Only Admins can access user management, meal management and system settings
     const adminOnlyNavItems: NavItem[] = isAdmin ? [
+        {
+            title: 'Meal Management',
+            href: '/admin/meals',
+            icon: ChefHat,
+        },
         {
             title: 'User Management',
             href: '/admin/users',

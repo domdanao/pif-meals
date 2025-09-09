@@ -54,7 +54,8 @@ class SystemMetric extends Model
     public static function getPublicMetrics(): array
     {
         return [
-            'available_meals' => self::getMetric('total_meals_available'),
+            'available_meals' => \App\Models\Meal::where('is_active', true)
+                ->sum('quantity_available') ?: 0, // Calculate dynamically from managed meals
             'claimed_meals' => self::getMetric('total_meals_claimed'),
             'active_pledges' => self::getMetric('total_pledges_active'),
             'total_donations' => self::getMetric('total_donors_count'), // This should be donor count, not amount
